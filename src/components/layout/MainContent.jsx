@@ -11,7 +11,7 @@ export default function MainContent() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/students" element={<Students />} />
         <Route path="/teachers" element={<Teachers />} />
-        <Route path="/classes" element={<Classes />} />
+        <Route path="/classes/*" element={<Classes />} />
         {/* Add more routes as needed */}
       </Routes>
     </main>
