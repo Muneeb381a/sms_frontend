@@ -13,6 +13,7 @@ import {
 } from "react-icons/fi";
 import { useTheme } from "../../context/ThemeContext";
 import { useState } from "react";
+import AddStudent from "../../pages/AddStudent";
 
 export default function Sidebar({ isOpen }) {
   const { theme } = useTheme();
