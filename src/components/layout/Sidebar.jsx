@@ -150,6 +150,28 @@ export default function Sidebar({ isOpen }) {
             isActive={isActive("/classes/schedule")}
           />
         </NavSection>
+        <NavSection
+          title="Fees"
+          icon={
+            <FiBook
+              className={theme === "dark" ? "text-gray-300" : "text-gray-600"}
+            />
+          }
+          isOpen={activeMenu.fees}
+          onToggle={() => toggleMenu("fees")}
+          theme={theme}
+        >
+          <NavLink
+            to="/fees"
+            label="Fees"
+            isActive={isActive("/fees")}
+          />
+          <NavLink
+            to="/fees/add"
+            label="Add Fee"
+            isActive={isActive("/fees/add")}
+          />
+        </NavSection>
 
         <NavLink
           to="/attendance"
