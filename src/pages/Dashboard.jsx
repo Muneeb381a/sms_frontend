@@ -1,36 +1,64 @@
+import { useEffect, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { FiUsers, FiBook, FiCheckCircle, FiActivity } from "react-icons/fi";
 import { RiArrowUpSFill, RiArrowDownSFill } from "react-icons/ri";
+import axios from "axios";
+import Loader from './Loader';
 
 export default function Dashboard() {
   const { theme } = useTheme();
+  const [stats, setStats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const stats = [
-    {
-      title: "Total Students",
-      value: "1,245",
-      change: "+12%",
-      icon: <FiUsers className="w-6 h-6" />,
-      color: "indigo",
-      trend: "up",
-    },
-    {
-      title: "Active Classes",
-      value: "32",
-      change: "+3 new",
-      icon: <FiBook className="w-6 h-6" />,
-      color: "emerald",
-      trend: "up",
-    },
-    {
-      title: "Attendance",
-      value: "92%",
-      change: "+2%",
-      icon: <FiCheckCircle className="w-6 h-6" />,
-      color: "amber",
-      trend: "up",
-    },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch students and classes data
+        const [studentsRes, classesRes] = await Promise.all([
+          axios.get('http://localhost:3500/api/v1/students'),
+          axios.get('http://localhost:3500/api/v1/classes')
+        ]);
+
+        setStats([
+          {
+            title: "Total Students",
+            value: studentsRes.data.data.length,
+            change: "+12%", // You can calculate real change if you have historical data
+            icon: <FiUsers className="w-6 h-6" />,
+            color: "indigo",
+            trend: "up",
+          },
+          {
+            title: "Active Classes",
+            value: classesRes.data.data.length,
+            change: "+3 new", // Update with real data if available
+            icon: <FiBook className="w-6 h-6" />,
+            color: "emerald",
+            trend: "up",
+          },
+          {
+            title: "Attendance",
+            value: "92%",
+            change: "+2%",
+            icon: <FiCheckCircle className="w-6 h-6" />,
+            color: "amber",
+            trend: "up",
+          },
+        ]);
+      } catch (err) {
+        setError('Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+
+  if (loading) return <Loader />;
+  if (error) return <div className="p-6 text-red-500">{error}</div>;
 
   const activities = [
     { id: 1, title: "New student enrolled", time: "10m ago", type: "student" },
