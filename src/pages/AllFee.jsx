@@ -94,7 +94,7 @@ export default function AllFee() {
                 <div>{new Date(ft.created_at).toLocaleString()}</div>
                 <div className="flex items-center space-x-3">
                   <Link
-                    to={`/edit/${ft.id}`}
+                    to={`/fees/edit/${ft.id}`} 
                     className={`px-3 py-2 text-xs font-medium rounded-lg ${
                       theme === "dark"
                         ? "bg-gray-600 hover:bg-gray-500 text-white"

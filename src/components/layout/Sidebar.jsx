@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import NavSection from "../../ui/NavSection";
 import NavLink from "../../ui/NavLink";
 import {
@@ -14,7 +14,6 @@ import {
 import { useTheme } from "../../context/ThemeContext";
 import { useState } from "react";
 import AddStudent from "../../pages/AddStudent";
-
 export default function Sidebar({ isOpen }) {
   const { theme } = useTheme();
   const location = useLocation();
@@ -24,6 +23,7 @@ export default function Sidebar({ isOpen }) {
     classes: false,
   });
 
+  const { id } = useParams();
   const toggleMenu = (menu) => {
     setActiveMenu((prev) => ({
       ...prev,
@@ -163,7 +163,7 @@ export default function Sidebar({ isOpen }) {
         >
           <NavLink
             to="/fees"
-            label="Fees"
+            label="Manage Fees"
             isActive={isActive("/fees")}
           />
           <NavLink
