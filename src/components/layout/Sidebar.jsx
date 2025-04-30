@@ -10,6 +10,7 @@ import {
   FiSettings,
   FiChevronDown,
   FiChevronRight,
+  FiDollarSign,
 } from "react-icons/fi";
 import { useTheme } from "../../context/ThemeContext";
 import { useState } from "react";
@@ -153,7 +154,7 @@ export default function Sidebar({ isOpen }) {
         <NavSection
           title="Fees"
           icon={
-            <FiBook
+            <FiDollarSign
               className={theme === "dark" ? "text-gray-300" : "text-gray-600"}
             />
           }
@@ -170,6 +171,11 @@ export default function Sidebar({ isOpen }) {
             to="/fees/add"
             label="Add Fee"
             isActive={isActive("/fees/add")}
+          />
+          <NavLink
+            to="/fees/vouchers"
+            label="Fee Vouchers"
+            isActive={location.pathname.startsWith("/fees/vouchers")}
           />
         </NavSection>
 
