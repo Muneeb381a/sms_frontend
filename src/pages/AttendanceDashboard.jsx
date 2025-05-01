@@ -52,7 +52,7 @@ const AttendanceDashboard = () => {
           Attendance Management
         </h1>
         <Link
-          to="/mark-attendance"
+          to="/attendance/mark-attendance"
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
           Mark Class Attendance

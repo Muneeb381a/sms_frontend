@@ -5,6 +5,8 @@ import Dashboard from "../../pages/Dashboard";
 import Students from "../../pages/Students";
 import Fees from "../../pages/Fees";
 import AttendanceDashboard from "../../pages/AttendanceDashboard";
+import MarkAttendanceForm from "../MarkAttendanceForm";
+import AttendanceLayout from "../../layouts/AttendanceLayout";
 
 export default function MainContent() {
   return (
@@ -15,7 +17,11 @@ export default function MainContent() {
         <Route path="/teachers" element={<Teachers />} />
         <Route path="/classes/*" element={<Classes />} />
         <Route path="/fees/*" element={<Fees />} />
-        <Route path="/attendance/*" element={<AttendanceDashboard />} />
+        <Route path="/attendance" element={<AttendanceLayout />}>
+          <Route index element={<AttendanceDashboard />} />
+          <Route path="mark-attendance" element={<MarkAttendanceForm />} />
+          {/* <Route path="edit/:id" element={<EditAttendance />} /> */}
+        </Route>
         {/* Add more routes as needed */}
       </Routes>
     </main>

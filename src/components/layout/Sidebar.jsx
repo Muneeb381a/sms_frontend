@@ -190,6 +190,17 @@ export default function Sidebar({ isOpen }) {
           isActive={isActive("/attendance")}
         />
         <NavLink
+          to="/attendance/mark-attendance"
+          icon={
+            <FiCalendar
+              className={theme === "dark" ? "text-gray-300" : "text-gray-600"}
+            />
+          }
+          label="Mark Attendance"
+          isActive={isActive("/attendance/mark-attendance")}
+        />
+
+        <NavLink
           to="/settings"
           icon={
             <FiSettings
