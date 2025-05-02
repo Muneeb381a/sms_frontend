@@ -7,6 +7,7 @@ import Fees from "../../pages/Fees";
 import AttendanceDashboard from "../../pages/AttendanceDashboard";
 import MarkAttendanceForm from "../MarkAttendanceForm";
 import AttendanceLayout from "../../layouts/AttendanceLayout";
+import AddTeacher from "../../pages/AddTeacher";
 
 export default function MainContent() {
   return (
@@ -15,6 +16,7 @@ export default function MainContent() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/students/*" element={<Students />} />
         <Route path="/teachers" element={<Teachers />} />
+        <Route path="/teachers/add" element={<AddTeacher />} />
         <Route path="/classes/*" element={<Classes />} />
         <Route path="/fees/*" element={<Fees />} />
         <Route path="/attendance" element={<AttendanceLayout />}>
