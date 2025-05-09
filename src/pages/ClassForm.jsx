@@ -23,9 +23,9 @@ const ClassForm = ({ onClose, onSuccess, initialData }) => {
 
       if (initialData) {
         payload.sections_to_delete = formData.sections_to_delete;
-        await api.put(`/classes/${initialData.id}`, payload);
+        await api.put(`/v1/classes/${initialData.id}`, payload);
       } else {
-        await api.post('/classes', payload);
+        await api.post('/v1/classes', payload);
       }
       
       onSuccess();
