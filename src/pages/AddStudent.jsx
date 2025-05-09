@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { z } from "zod";
 import { toast, ToastContainer } from "react-toastify";
@@ -20,28 +20,42 @@ import { useTheme } from "../context/ThemeContext";
 import Loader from "./Loader";
 import { Switch } from "@headlessui/react";
 
-
 // Zod Schema Definition
 const studentSchema = z.object({
-  class_id: z.string().min(1, "Class is required"),
-  section_id: z.string().optional(),
+  class_id: z.number().min(1, "Class is required"),
+  section_id: z.number().optional(),
   roll_number: z.string().optional(),
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
-  dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").optional(),
-  whatsapp_number: z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number").optional(),
-  cell_number: z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number").optional(),
+  dob: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format")
+    .optional(),
+  whatsapp_number: z
+    .string()
+    .regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number")
+    .optional(),
+  cell_number: z
+    .string()
+    .regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number")
+    .optional(),
   address: z.string().optional(),
   gender: z.enum(["male", "female", "other"]).optional(),
   academic_session: z.string().optional(),
-  admission_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").optional(),
+  admission_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format")
+    .optional(),
   b_form_number: z.string().length(13, "Must be 13 digits").optional(),
   city: z.string().optional(),
   cnic_number: z.string().length(13, "Must be 13 digits").optional(),
   disability: z.boolean().default(false),
   district: z.string().optional(),
-  emergency_contact: z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number").optional(),
+  emergency_contact: z
+    .string()
+    .regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number")
+    .optional(),
   guardian_cnic: z.string().length(13, "Must be 13 digits").optional(),
   guardian_name: z.string().optional(),
   guardian_occupation: z.string().optional(),
@@ -53,6 +67,46 @@ const studentSchema = z.object({
   religion: z.string().optional(),
   student_status: z.enum(["active", "inactive", "suspended"]).default("active"),
 });
+
+// Predefined options
+const districts = [
+  { value: "", label: "Select District" },
+  { value: "Lahore", label: "Lahore" },
+  { value: "Karachi", label: "Karachi" },
+  { value: "Islamabad", label: "Islamabad" },
+  { value: "Rawalpindi", label: "Rawalpindi" },
+  { value: "Faisalabad", label: "Faisalabad" },
+  { value: "Multan", label: "Multan" },
+  { value: "Peshawar", label: "Peshawar" },
+  { value: "Quetta", label: "Quetta" },
+];
+
+const countries = [
+  { value: "", label: "Select Country" },
+  { value: "Pakistan", label: "Pakistan" },
+  { value: "India", label: "India" },
+  { value: "United States", label: "United States" },
+  { value: "United Kingdom", label: "United Kingdom" },
+  { value: "China", label: "China" },
+];
+
+const nationalities = [
+  { value: "", label: "Select Nationality" },
+  { value: "Pakistani", label: "Pakistani" },
+  { value: "Indian", label: "Indian" },
+  { value: "American", label: "American" },
+  { value: "British", label: "British" },
+  { value: "Chinese", label: "Chinese" },
+];
+
+const religions = [
+  { value: "", label: "Select Religion" },
+  { value: "Islam", label: "Islam" },
+  { value: "Christianity", label: "Christianity" },
+  { value: "Hinduism", label: "Hinduism" },
+  { value: "Sikhism", label: "Sikhism" },
+  { value: "Other", label: "Other" },
+];
 
 const AddStudent = () => {
   const { theme } = useTheme();
@@ -91,100 +145,71 @@ const AddStudent = () => {
   const [pdfFile, setPdfFile] = useState(null);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [classes, setClasses] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [fetchError, setFetchError] = useState(null);
+
+  // Fetch classes on mount
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:3500/api/v1/classes",
+        );
+        setClasses(response.data.data);
+      } catch (error) {
+        const message =
+          error.response?.data?.message || "Failed to fetch classes";
+        setFetchError(message);
+        toast.error(message, { theme: theme === "dark" ? "dark" : "light" });
+      }
+    };
+    fetchClasses();
+  }, []);
+
+  // Update sections when class_id changes
+  useEffect(() => {
+    if (formData.class_id) {
+      const selectedClass = classes.find(
+        (cls) => cls.id === parseInt(formData.class_id)
+      );
+      setSections(selectedClass ? selectedClass.sections : []);
+      setFormData((prev) => ({ ...prev, section_id: "" })); // Reset section_id
+    } else {
+      setSections([]);
+      setFormData((prev) => ({ ...prev, section_id: "" }));
+    }
+  }, [formData.class_id, classes]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: undefined }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        name === "class_id" || name === "section_id"
+          ? parseInt(value) || ""
+          : value,
+    }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    // Validate file types and sizes
     if (type === "image" && !file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
+      toast.error("Please upload an image file", {
+        theme: theme === "dark" ? "dark" : "light",
+      });
       return;
     }
-
     if (type === "pdf" && file.type !== "application/pdf") {
-      toast.error("Please upload a PDF file");
+      toast.error("Please upload a PDF file", {
+        theme: theme === "dark" ? "dark" : "light",
+      });
       return;
     }
-
     if (type === "image") setImageFile(file);
     else if (type === "pdf") setPdfFile(file);
-  };
-
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    // Required fields
-    if (!formData.class_id) newErrors.class_id = "Class is required";
-    if (!formData.first_name) newErrors.first_name = "First name is required";
-    if (!formData.last_name) newErrors.last_name = "Last name is required";
-    if (!formData.email) newErrors.email = "Email is required";
-    else if (!/^\S+@\S+\.\S+$/.test(formData.email))
-      newErrors.email = "Invalid email";
-
-    // Optional field validations
-    if (formData.dob && !/^\d{4}-\d{2}-\d{2}$/.test(formData.dob)) {
-      newErrors.dob = "Invalid date format (YYYY-MM-DD)";
-    }
-    if (
-      formData.admission_date &&
-      !/^\d{4}-\d{2}-\d{2}$/.test(formData.admission_date)
-    ) {
-      newErrors.admission_date = "Invalid date format (YYYY-MM-DD)";
-    }
-    if (
-      formData.whatsapp_number &&
-      !/^\+?[1-9]\d{1,14}$/.test(formData.whatsapp_number)
-    ) {
-      newErrors.whatsapp_number = "Invalid phone number";
-    }
-    if (
-      formData.cell_number &&
-      !/^\+?[1-9]\d{1,14}$/.test(formData.cell_number)
-    ) {
-      newErrors.cell_number = "Invalid phone number";
-    }
-    if (
-      formData.emergency_contact &&
-      !/^\+?[1-9]\d{1,14}$/.test(formData.emergency_contact)
-    ) {
-      newErrors.emergency_contact = "Invalid phone number";
-    }
-    if (
-      formData.gender &&
-      !["male", "female", "other"].includes(formData.gender.toLowerCase())
-    ) {
-      newErrors.gender = "Must be male, female, or other";
-    }
-    if (
-      formData.student_status &&
-      !["active", "inactive", "suspended"].includes(
-        formData.student_status.toLowerCase()
-      )
-    ) {
-      newErrors.student_status = "Must be active, inactive, or suspended";
-    }
-    if (formData.cnic_number && !/^\d{13}$/.test(formData.cnic_number)) {
-      newErrors.cnic_number = "Must be 13 digits";
-    }
-    if (formData.guardian_cnic && !/^\d{13}$/.test(formData.guardian_cnic)) {
-      newErrors.guardian_cnic = "Must be 13 digits";
-    }
-    if (formData.b_form_number && !/^\d{13}$/.test(formData.b_form_number)) {
-      newErrors.b_form_number = "Must be 13 digits";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleDisabilityChange = (checked) => {
@@ -194,7 +219,7 @@ const AddStudent = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       // Zod validation
       await studentSchema.parseAsync(formData);
@@ -208,32 +233,44 @@ const AddStudent = () => {
       if (imageFile) data.append("image", imageFile);
       if (pdfFile) data.append("pdf", pdfFile);
 
-      const response = await axios.post("http://localhost:3500/api/v1/students", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await axios.post(
+        "http://localhost:3500/api/v1/students",
+        data,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       if (response.data.status === "success") {
-        toast.success("Student created successfully!", {
-          theme: theme === "dark" ? "dark" : "light",
-        });
+        const className =
+          classes.find((cls) => cls.id === formData.class_id)?.class_name ||
+          "Class";
+        toast.success(
+          `Student ${formData.first_name} ${formData.last_name} added to ${className} successfully!`,
+          { theme: theme === "dark" ? "dark" : "light" }
+        );
         resetForm();
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
         const zodErrors = error.flatten().fieldErrors;
-        const formattedErrors = Object.entries(zodErrors).reduce((acc, [key, value]) => ({
-          ...acc,
-          [key]: value?.[0],
-        }), {});
+        const formattedErrors = Object.entries(zodErrors).reduce(
+          (acc, [key, value]) => ({
+            ...acc,
+            [key]: value?.[0],
+          }),
+          {}
+        );
         setErrors(formattedErrors);
         toast.error("Please fix the validation errors", {
           theme: theme === "dark" ? "dark" : "light",
         });
       } else {
-        const message = error.response?.data?.message || "Failed to create student";
-        toast.error(message, {
-          theme: theme === "dark" ? "dark" : "light",
-        });
+        const message =
+          error.response?.data?.message || "Failed to create student";
+        toast.error(message, { theme: theme === "dark" ? "dark" : "light" });
       }
     } finally {
       setIsSubmitting(false);
@@ -274,6 +311,7 @@ const AddStudent = () => {
     });
     setImageFile(null);
     setPdfFile(null);
+    setErrors({});
   };
 
   return (
@@ -299,18 +337,11 @@ const AddStudent = () => {
           <h1 className="text-3xl font-bold">Student Registration</h1>
         </div>
         {isSubmitting && <Loader />}
-        {submitSuccess && (
-          <div className="mb-6 p-4 bg-green-100 text-green-700 rounded-lg">
-            Student created successfully!
-          </div>
-        )}
-        {submitError && (
+        {fetchError && (
           <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-lg">
-            {submitError}
+            {fetchError}
           </div>
         )}
-
-        {isSubmitting && <Loader />}
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Personal Information */}
@@ -435,23 +466,44 @@ const AddStudent = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
-                label="Class ID"
+                label="Class"
                 name="class_id"
+                type="select"
                 value={formData.class_id}
                 onChange={handleInputChange}
                 error={errors.class_id}
                 theme={theme}
                 icon={<FiBook />}
+                options={[
+                  { value: "", label: "Select Class" },
+                  ...classes.map((cls) => ({
+                    value: cls.id,
+                    label: cls.class_name,
+                  })),
+                ]}
                 required
               />
               <FormField
-                label="Section ID"
+                label="Section"
                 name="section_id"
+                type="select"
                 value={formData.section_id}
                 onChange={handleInputChange}
                 error={errors.section_id}
                 theme={theme}
                 icon={<FiBook />}
+                options={[
+                  {
+                    value: "",
+                    label: sections.length
+                      ? "Select Section"
+                      : "No Sections Available",
+                  },
+                  ...sections.map((sec) => ({
+                    value: sec.id,
+                    label: sec.section_name,
+                  })),
+                ]}
               />
               <FormField
                 label="Roll Number"
@@ -628,11 +680,13 @@ const AddStudent = () => {
               <FormField
                 label="District"
                 name="district"
+                type="select"
                 value={formData.district}
                 onChange={handleInputChange}
                 error={errors.district}
                 theme={theme}
                 icon={<FiMapPin />}
+                options={districts}
               />
               <FormField
                 label="Province"
@@ -653,22 +707,37 @@ const AddStudent = () => {
                 icon={<FiMapPin />}
               />
               <FormField
+                label="Country"
+                name="country"
+                type="select"
+                value={formData.country}
+                onChange={handleInputChange}
+                error={errors.country}
+                theme={theme}
+                icon={<FiFlag />}
+                options={countries}
+              />
+              <FormField
                 label="Nationality"
                 name="nationality"
+                type="select"
                 value={formData.nationality}
                 onChange={handleInputChange}
                 error={errors.nationality}
                 theme={theme}
                 icon={<FiFlag />}
+                options={nationalities}
               />
               <FormField
                 label="Religion"
                 name="religion"
+                type="select"
                 value={formData.religion}
                 onChange={handleInputChange}
                 error={errors.religion}
                 theme={theme}
                 icon={<FiBook />}
+                options={religions}
               />
             </div>
           </div>
@@ -762,7 +831,7 @@ const AddStudent = () => {
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || classes.length === 0}
               className={`px-6 py-3 rounded-lg transition-colors ${
                 theme === "dark"
                   ? "bg-blue-600 hover:bg-blue-700 text-white"
@@ -829,7 +898,7 @@ const FormField = ({
           name={name}
           value={value}
           onChange={onChange}
-          className={`w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${
+          className={`w-full pl-10 pr-4 py-2 roundedLg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${
             theme === "dark"
               ? "bg-gray-700 border-gray-600 text-white"
               : "bg-white border-gray-300 text-gray-900"
