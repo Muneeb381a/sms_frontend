@@ -24,7 +24,6 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [selectedChart, setSelectedChart] = useState("students");
 
-  // Chart data configuration
   const studentGrowthData = {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
     datasets: [
@@ -60,17 +59,23 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+
         const [studentsRes, classesRes, attendanceRes] = await Promise.all([
           axios.get("http://localhost:3500/api/v1/students"),
           axios.get("http://localhost:3500/api/v1/classes"),
-          axios.get("http://localhost:3500/api/v1/attendance"),
+          axios.get("http://localhost:3500/api/v1/attendance/today"),
         ]);
+
+        // Fetch total students for class_id: 1 separately if not in students response
+        const totalStudentsRes = await axios.get(
+          "http://localhost:3500/api/v1/students?class_id=1",
+        );
 
         setStats([
           {
             title: "Total Students",
             value: studentsRes.data.data.length,
-            change: "+12%",
+            change: "+12%", // TODO: Replace with dynamic data
             icon: <FiUsers className="w-6 h-6" />,
             color: "indigo",
             trend: "up",
@@ -78,22 +83,34 @@ export default function Dashboard() {
           {
             title: "Active Classes",
             value: classesRes.data.data.length,
-            change: "+3 new",
+            change: "+3 new", // TODO: Replace with dynamic data
             icon: <FiBook className="w-6 h-6" />,
             color: "emerald",
             trend: "up",
           },
           {
             title: "Today's Attendance",
-            value: `${attendanceRes.data?.status}`, 
-            change: `${attendanceRes.data.length}/${attendanceRes.pagination?.total}`,
+            value: `${attendanceRes.data.percentage.toFixed(2)}%`,
+            change: `${
+              attendanceRes.data.data.filter(
+                (record) => record.status === "present"
+              ).length
+            }/${totalStudentsRes.data.data.length} present`,
             icon: <FiCheckCircle className="w-6 h-6" />,
             color: "amber",
-            trend: attendanceRes.data.length >= attendanceRes.pagination?.total ? "up" : "down"
-          },          
+            trend: attendanceRes.data.percentage >= 50 ? "up" : "down",
+          },
         ]);
       } catch (err) {
-        setError("Failed to load dashboard data");
+        console.error(
+          "Error fetching dashboard data:",
+          err.response?.data || err.message
+        );
+        setError(
+          `Failed to load dashboard data: ${
+            err.response?.data?.error || err.message
+          }`
+        );
       } finally {
         setLoading(false);
       }
@@ -179,7 +196,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {stats.map((stat, index) => (
             <div
@@ -235,7 +251,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div
             className={`p-6 rounded-xl ${
@@ -258,9 +273,7 @@ export default function Dashboard() {
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                      legend: { display: false },
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
                       x: {
                         grid: {
@@ -281,9 +294,7 @@ export default function Dashboard() {
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                      legend: { display: false },
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
                       x: {
                         grid: {
@@ -302,7 +313,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Upcoming Events */}
           <div
             className={`p-6 rounded-xl ${
               theme === "dark" ? "bg-gray-800" : "bg-white"
@@ -360,9 +370,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Activity & Quick Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent Activity */}
           <div
             className={`lg:col-span-2 p-6 rounded-xl ${
               theme === "dark" ? "bg-gray-800" : "bg-white"
@@ -423,7 +431,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Quick Stats */}
           <div
             className={`p-6 rounded-xl ${
               theme === "dark" ? "bg-gray-800" : "bg-white"
