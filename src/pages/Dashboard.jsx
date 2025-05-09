@@ -68,7 +68,7 @@ export default function Dashboard() {
 
         // Fetch total students for class_id: 1 separately if not in students response
         const totalStudentsRes = await axios.get(
-          "http://localhost:3500/api/v1/students?class_id=1",
+          "http://localhost:3500/api/v1/students",
         );
 
         setStats([
