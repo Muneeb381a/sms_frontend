@@ -1,5 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
+import { z } from "zod";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   FiUploadCloud,
   FiUser,
@@ -16,6 +19,40 @@ import {
 import { useTheme } from "../context/ThemeContext";
 import Loader from "./Loader";
 import { Switch } from "@headlessui/react";
+
+
+// Zod Schema Definition
+const studentSchema = z.object({
+  class_id: z.string().min(1, "Class is required"),
+  section_id: z.string().optional(),
+  roll_number: z.string().optional(),
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").optional(),
+  whatsapp_number: z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number").optional(),
+  cell_number: z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number").optional(),
+  address: z.string().optional(),
+  gender: z.enum(["male", "female", "other"]).optional(),
+  academic_session: z.string().optional(),
+  admission_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").optional(),
+  b_form_number: z.string().length(13, "Must be 13 digits").optional(),
+  city: z.string().optional(),
+  cnic_number: z.string().length(13, "Must be 13 digits").optional(),
+  disability: z.boolean().default(false),
+  district: z.string().optional(),
+  emergency_contact: z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number").optional(),
+  guardian_cnic: z.string().length(13, "Must be 13 digits").optional(),
+  guardian_name: z.string().optional(),
+  guardian_occupation: z.string().optional(),
+  guardian_relationship: z.string().optional(),
+  nationality: z.string().optional(),
+  postal_code: z.string().optional(),
+  previous_school: z.string().optional(),
+  province: z.string().optional(),
+  religion: z.string().optional(),
+  student_status: z.enum(["active", "inactive", "suspended"]).default("active"),
+});
 
 const AddStudent = () => {
   const { theme } = useTheme();
@@ -56,6 +93,32 @@ const AddStudent = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: undefined }));
+  };
+
+  const handleFileChange = (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file types and sizes
+    if (type === "image" && !file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    if (type === "pdf" && file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+
+    if (type === "image") setImageFile(file);
+    else if (type === "pdf") setPdfFile(file);
+  };
+
 
   const validateForm = () => {
     const newErrors = {};
@@ -124,97 +187,93 @@ const AddStudent = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
-  };
-
-  const handleFileChange = (e, type) => {
-    const file = e.target.files[0];
-    if (type === "image") {
-      setImageFile(file);
-    } else if (type === "pdf") {
-      setPdfFile(file);
-    }
-  };
-
   const handleDisabilityChange = (checked) => {
     setFormData((prev) => ({ ...prev, disability: checked }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitError(null);
-    setSubmitSuccess(false);
-
-    if (!validateForm()) {
-      return;
-    }
-
     setIsSubmitting(true);
-    const data = new FormData();
-
-    Object.entries(formData).forEach(([key, value]) => {
-      if (value !== "" && value !== false) {
-        data.append(key, value);
-      }
-    });
-
-    if (imageFile) data.append("image", imageFile);
-    if (pdfFile) data.append("pdf", pdfFile);
-
+    
     try {
-      const response = await axios.post("/api/v1/students", data, {
+      // Zod validation
+      await studentSchema.parseAsync(formData);
+      setErrors({});
+
+      const data = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== "" && value !== false) data.append(key, value);
+      });
+
+      if (imageFile) data.append("image", imageFile);
+      if (pdfFile) data.append("pdf", pdfFile);
+
+      const response = await axios.post("http://localhost:3500/api/v1/students", data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (response.data.status === "success") {
-        setSubmitSuccess(true);
-        setFormData({
-          class_id: "",
-          section_id: "",
-          roll_number: "",
-          first_name: "",
-          last_name: "",
-          email: "",
-          dob: "",
-          whatsapp_number: "",
-          cell_number: "",
-          address: "",
-          gender: "",
-          academic_session: "",
-          admission_date: "",
-          b_form_number: "",
-          city: "",
-          cnic_number: "",
-          disability: false,
-          district: "",
-          emergency_contact: "",
-          guardian_cnic: "",
-          guardian_name: "",
-          guardian_occupation: "",
-          guardian_relationship: "",
-          nationality: "",
-          postal_code: "",
-          previous_school: "",
-          province: "",
-          religion: "",
-          student_status: "active",
+        toast.success("Student created successfully!", {
+          theme: theme === "dark" ? "dark" : "light",
         });
-        setImageFile(null);
-        setPdfFile(null);
-        setErrors({});
+        resetForm();
       }
     } catch (error) {
-      setSubmitError(
-        error.response?.data?.message || "Failed to create student"
-      );
+      if (error instanceof z.ZodError) {
+        const zodErrors = error.flatten().fieldErrors;
+        const formattedErrors = Object.entries(zodErrors).reduce((acc, [key, value]) => ({
+          ...acc,
+          [key]: value?.[0],
+        }), {});
+        setErrors(formattedErrors);
+        toast.error("Please fix the validation errors", {
+          theme: theme === "dark" ? "dark" : "light",
+        });
+      } else {
+        const message = error.response?.data?.message || "Failed to create student";
+        toast.error(message, {
+          theme: theme === "dark" ? "dark" : "light",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      class_id: "",
+      section_id: "",
+      roll_number: "",
+      first_name: "",
+      last_name: "",
+      email: "",
+      dob: "",
+      whatsapp_number: "",
+      cell_number: "",
+      address: "",
+      gender: "",
+      academic_session: "",
+      admission_date: "",
+      b_form_number: "",
+      city: "",
+      cnic_number: "",
+      disability: false,
+      district: "",
+      emergency_contact: "",
+      guardian_cnic: "",
+      guardian_name: "",
+      guardian_occupation: "",
+      guardian_relationship: "",
+      nationality: "",
+      postal_code: "",
+      previous_school: "",
+      province: "",
+      religion: "",
+      student_status: "active",
+    });
+    setImageFile(null);
+    setPdfFile(null);
   };
 
   return (
@@ -223,11 +282,23 @@ const AddStudent = () => {
         theme === "dark" ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
       }`}
     >
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme={theme}
+      />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Student Registration</h1>
         </div>
-
+        {isSubmitting && <Loader />}
         {submitSuccess && (
           <div className="mb-6 p-4 bg-green-100 text-green-700 rounded-lg">
             Student created successfully!
@@ -692,7 +763,11 @@ const AddStudent = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className={`px-6 py-3 rounded-lg transition-colors ${
+                theme === "dark"
+                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              } disabled:opacity-50`}
             >
               {isSubmitting ? "Submitting..." : "Create Student"}
             </button>
