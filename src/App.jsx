@@ -10,6 +10,7 @@ export default function App() {
 
   return (
     <ThemeProvider>
+      <ToastContainer />
       <Router>
         <div className="min-h-screen bg-gray-100">
           <Sidebar isOpen={isSidebarOpen} />
