@@ -7,22 +7,22 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { ToastContainer } from "react-toastify";
 
 export default function App() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <ThemeProvider>
       <ToastContainer />
       <Router>
         <div className="min-h-screen bg-gray-100">
-          <Sidebar isOpen={isSidebarOpen} />
+        <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
           <div
             className={`transition-margin duration-300 ${
-              isSidebarOpen ? "ml-64" : "ml-0"
+              sidebarOpen ? "ml-64" : "ml-10"
             }`}
           >
             <Header
-              toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-              isSidebarOpen={isSidebarOpen}
+              toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+              isSidebarOpen={sidebarOpen}
             />
             <MainContent />
           </div>
