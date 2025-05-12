@@ -68,7 +68,7 @@ const StudentList = () => {
     setStatusLoading((prev) => ({ ...prev, [studentId]: true }));
     try {
       const response = await api.patch(
-        `http://localhost:3500/api/v1/students/${studentId}/status`,
+        `https://sms-backend-five.vercel.app/api/v1/students/${studentId}/status`,
         {
           status: newStatus,
         }
