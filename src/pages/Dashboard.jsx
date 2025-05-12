@@ -61,14 +61,14 @@ export default function Dashboard() {
       try {
 
         const [studentsRes, classesRes, attendanceRes] = await Promise.all([
-          axios.get("http://localhost:3500/api/v1/students"),
-          axios.get("http://localhost:3500/api/v1/classes"),
-          axios.get("http://localhost:3500/api/v1/attendance/today"),
+          axios.get("https://sms-backend-five.vercel.app/api/v1/students"),
+          axios.get("https://sms-backend-five.vercel.app/api/v1/classes"),
+          axios.get("https://sms-backend-five.vercel.app/api/v1/attendance/today"),
         ]);
 
         // Fetch total students for class_id: 1 separately if not in students response
         const totalStudentsRes = await axios.get(
-          "http://localhost:3500/api/v1/students",
+          "https://sms-backend-five.vercel.app/api/v1/students",
         );
 
         setStats([
