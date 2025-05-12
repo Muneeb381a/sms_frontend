@@ -163,7 +163,7 @@ const AddStudent = () => {
     const fetchClasses = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:3500/api/v1/classes",
+          "https://sms-backend-five.vercel.app/api/v1/classes",
         );
         setClasses(response.data.data);
       } catch (error) {
@@ -243,7 +243,7 @@ const AddStudent = () => {
       if (pdfFile) data.append("pdf", pdfFile);
 
       const response = await axios.post(
-        "http://localhost:3500/api/v1/students",
+        "https://sms-backend-five.vercel.app/api/v1/students",
         data,
         {
           headers: {
