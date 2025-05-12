@@ -80,6 +80,15 @@ const districts = [
   { value: "Peshawar", label: "Peshawar" },
   { value: "Quetta", label: "Quetta" },
 ];
+const provinces = [
+  { value: "", label: "Select Province" },
+  { value: "Punjab", label: "Punjab" },
+  { value: "Sindh", label: "Sindh" },
+  { value: "Khyber Pakhtunkhwa", label: "Khyber Pakhtunkhwa" },
+  { value: "Balochistan", label: "Balochistan" },
+  { value: "Azad Kashmir", label: "Azad Kashmir" },
+  { value: "Gilgit-Baltistan", label: "Gilgit-Baltistan" },
+];
 
 const countries = [
   { value: "", label: "Select Country" },
@@ -691,11 +700,13 @@ const AddStudent = () => {
               <FormField
                 label="Province"
                 name="province"
+                type="select"
                 value={formData.province}
                 onChange={handleInputChange}
                 error={errors.province}
                 theme={theme}
                 icon={<FiMapPin />}
+                options={provinces}
               />
               <FormField
                 label="Postal Code"
