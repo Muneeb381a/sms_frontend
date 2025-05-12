@@ -24,6 +24,7 @@ const StudentList = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [statusLoading, setStatusLoading] = useState({}); // Track loading state per student
   const { theme } = useTheme();
 
   const formatDate = (dateString) => {
@@ -55,13 +56,60 @@ const StudentList = () => {
     fetchStudents();
   }, [currentPage]);
 
+  const handleStatusChange = async (studentId, newStatus) => {
+    console.log("Updating status for student:", studentId, "to:", newStatus); // Debug
+    if (
+      !window.confirm(
+        `Are you sure you want to change the status to "${newStatus}"?`
+      )
+    ) {
+      return;
+    }
+    setStatusLoading((prev) => ({ ...prev, [studentId]: true }));
+    try {
+      const response = await api.patch(
+        `http://localhost:3500/api/v1/students/${studentId}/status`,
+        {
+          status: newStatus,
+        }
+      );
+      setStudents((prevStudents) =>
+        prevStudents.map((student) =>
+          student.id === studentId
+            ? {
+                ...student,
+                student_status: newStatus,
+                updated_at: response.data.data.updated_at,
+              }
+            : student
+        )
+      );
+      setError(null); // Clear previous errors
+    } catch (err) {
+      const errorMessage =
+        err.response?.status === 404
+          ? "Student not found. Please refresh the list."
+          : err.response?.status === 400
+          ? "Invalid status value. Please select a valid status."
+          : `Failed to update status: ${
+              err.response?.data?.message || err.message
+            }`;
+      setError(errorMessage);
+    } finally {
+      setStatusLoading((prev) => ({ ...prev, [studentId]: false }));
+    }
+  };
+
   const StudentDetailModal = () => (
     <Dialog
       open={!!selectedStudent}
       onClose={() => setSelectedStudent(null)}
       className="relative z-50"
     >
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-lg" aria-hidden="true" />
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-lg"
+        aria-hidden="true"
+      />
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <Dialog.Panel
           className={`w-full max-w-3xl rounded-xl p-6 shadow-2xl transition-all ${
@@ -72,7 +120,6 @@ const StudentList = () => {
         >
           {selectedStudent && (
             <div className="space-y-6">
-              {/* Modal Header */}
               <div className="flex justify-between items-start pb-4 border-b border-gray-700">
                 <Dialog.Title className="text-2xl font-bold flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-blue-500/20">
@@ -91,12 +138,13 @@ const StudentList = () => {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column */}
                 <div className="lg:col-span-1 space-y-6">
                   <div className="relative group group-hover:shadow-lg transition-shadow">
                     <div className="aspect-square rounded-xl overflow-hidden border-2 border-gray-700 shadow-xl">
                       <img
-                        src={selectedStudent.image_url || "/user-placeholder.svg"}
+                        src={
+                          selectedStudent.image_url || "/user-placeholder.svg"
+                        }
                         alt="Student"
                         className="w-full h-full object-cover transition-transform group-hover:scale-105"
                       />
@@ -115,21 +163,24 @@ const StudentList = () => {
                           ? "bg-gray-800 hover:bg-gray-700 border border-gray-700"
                           : "bg-gray-50 hover:bg-gray-100 border border-gray-200"
                       }`}
-                      onClick={() => window.open(selectedStudent.pdf_url, "_blank")}
+                      onClick={() =>
+                        window.open(selectedStudent.pdf_url, "_blank")
+                      }
                     >
                       <div className="p-2 rounded-md bg-blue-500/20">
                         <FiFileText className="w-5 h-5 text-blue-400" />
                       </div>
                       <div className="flex-1">
                         <p className="font-medium">PDF Document</p>
-                        <p className="text-sm text-gray-500">Click to view/download</p>
+                        <p className="text-sm text-gray-500">
+                          Click to view/download
+                        </p>
                       </div>
                       <FiDownloadCloud className="w-5 h-5 text-gray-400" />
                     </div>
                   )}
                 </div>
 
-                {/* Right Column */}
                 <div className="lg:col-span-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <DetailItem
@@ -222,7 +273,6 @@ const StudentList = () => {
       </div>
     </div>
   );
-
 
   if (loading) return <Loader />;
 
@@ -336,23 +386,27 @@ const StudentList = () => {
                       {formatDate(student.admission_date)}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          student.student_status === "active"
-                            ? theme === "dark"
-                              ? "bg-green-800/30 text-green-400"
-                              : "bg-green-100 text-green-800"
-                            : student.student_status === "inactive"
-                            ? theme === "dark"
-                              ? "bg-red-800/30 text-red-400"
-                              : "bg-red-100 text-red-800"
-                            : theme === "dark"
-                            ? "bg-yellow-800/30 text-yellow-400"
-                            : "bg-yellow-100 text-yellow-800"
+                      <select
+                        value={student.student_status || "active"}
+                        onChange={(e) =>
+                          handleStatusChange(student.id, e.target.value)
+                        }
+                        disabled={statusLoading[student.id]}
+                        className={`px-3 py-1 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          theme === "dark"
+                            ? "bg-gray-700 text-gray-200 border border-gray-600"
+                            : "bg-gray-100 text-gray-800 border border-gray-300"
+                        } ${
+                          statusLoading[student.id]
+                            ? "opacity-50 cursor-not-allowed"
+                            : "cursor-pointer"
                         }`}
                       >
-                        {student.student_status}
-                      </span>
+                        <option value="active">Active</option>
+                        <option value="left">Left</option>
+                        <option value="graduated">Graduated</option>
+                        <option value="expelled">Expelled</option>
+                      </select>
                     </td>
                     <td className="px-4 py-3">
                       <button
