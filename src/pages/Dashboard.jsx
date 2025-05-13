@@ -9,6 +9,7 @@ import {
   FiBarChart2,
   FiClock,
   FiStar,
+  FiBell,
 } from "react-icons/fi";
 import { RiArrowUpSFill, RiArrowDownSFill } from "react-icons/ri";
 import axios from "axios";
@@ -20,6 +21,7 @@ Chart.register(...registerables);
 export default function Dashboard() {
   const { theme } = useTheme();
   const [stats, setStats] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedChart, setSelectedChart] = useState("students");
@@ -59,22 +61,46 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const [studentsRes, classesRes, attendanceRes, notificationsRes] =
+          await Promise.all([
+            axios
+              .get("https://sms-backend-five.vercel.app/api/v1/students")
+              .catch(() => ({ data: { data: [] } })),
+            axios
+              .get("https://sms-backend-five.vercel.app/api/v1/classes")
+              .catch(() => ({ data: { data: [] } })),
+            axios
+              .get(
+                "https://sms-backend-five.vercel.app/api/v1/attendance/today"
+              )
+              .catch(() => ({ data: { percentage: 0, data: [] } })),
+            axios
+              .get("https://sms-backend-five.vercel.app/api/v1/notification")
+              .catch(() => ({ data: { data: [] } })),
+          ]);
 
-        const [studentsRes, classesRes, attendanceRes] = await Promise.all([
-          axios.get("https://sms-backend-five.vercel.app/api/v1/students"),
-          axios.get("https://sms-backend-five.vercel.app/api/v1/classes"),
-          axios.get("https://sms-backend-five.vercel.app/api/v1/attendance/today"),
-        ]);
-
-        // Fetch total students for class_id: 1 separately if not in students response
-        const totalStudentsRes = await axios.get(
-          "https://sms-backend-five.vercel.app/api/v1/students",
-        );
+        // Calculate stats
+        const totalStudents = Array.isArray(studentsRes.data.data)
+          ? studentsRes.data.data.length
+          : 0;
+        const totalClasses = Array.isArray(classesRes.data.data)
+          ? classesRes.data.data.length
+          : 0;
+        const attendancePercentage = Number.isFinite(
+          attendanceRes.data.percentage
+        )
+          ? attendanceRes.data.percentage
+          : 0;
+        const presentCount = Array.isArray(attendanceRes.data.data)
+          ? attendanceRes.data.data.filter(
+              (record) => record.status === "present"
+            ).length
+          : 0;
 
         setStats([
           {
             title: "Total Students",
-            value: studentsRes.data.data.length,
+            value: totalStudents,
             change: "+12%", // TODO: Replace with dynamic data
             icon: <FiUsers className="w-6 h-6" />,
             color: "indigo",
@@ -82,7 +108,7 @@ export default function Dashboard() {
           },
           {
             title: "Active Classes",
-            value: classesRes.data.data.length,
+            value: totalClasses,
             change: "+3 new", // TODO: Replace with dynamic data
             icon: <FiBook className="w-6 h-6" />,
             color: "emerald",
@@ -90,17 +116,19 @@ export default function Dashboard() {
           },
           {
             title: "Today's Attendance",
-            value: `${attendanceRes.data.percentage.toFixed(2)}%`,
-            change: `${
-              attendanceRes.data.data.filter(
-                (record) => record.status === "present"
-              ).length
-            }/${totalStudentsRes.data.data.length} present`,
+            value: `${attendancePercentage.toFixed(2)}%`,
+            change: `${presentCount}/${totalStudents} present`,
             icon: <FiCheckCircle className="w-6 h-6" />,
             color: "amber",
-            trend: attendanceRes.data.percentage >= 50 ? "up" : "down",
+            trend: attendancePercentage >= 50 ? "up" : "down",
           },
         ]);
+
+        setNotifications(
+          Array.isArray(notificationsRes.data.data)
+            ? notificationsRes.data.data
+            : []
+        );
       } catch (err) {
         console.error(
           "Error fetching dashboard data:",
@@ -319,6 +347,100 @@ export default function Dashboard() {
             }`}
           >
             <div className="flex items-center space-x-2 mb-4">
+              <FiBell
+                className={`w-6 h-6 ${
+                  theme === "dark" ? "text-indigo-400" : "text-indigo-600"
+                }`}
+              />
+              <h3
+                className={`text-lg font-semibold ${
+                  theme === "dark" ? "text-gray-200" : "text-gray-800"
+                }`}
+              >
+                Notifications
+              </h3>
+            </div>
+            <div className="space-y-4">
+              {notifications.length === 0 ? (
+                <p
+                  className={`text-sm ${
+                    theme === "dark" ? "text-gray-400" : "text-gray-500"
+                  }`}
+                >
+                  No notifications available
+                </p>
+              ) : (
+                notifications.slice(0, 5).map((notification) => (
+                  <div
+                    key={notification.notification_id}
+                    className={`p-4 rounded-lg ${
+                      theme === "dark" ? "bg-gray-700" : "bg-gray-50"
+                    } ${
+                      !notification.is_read
+                        ? "border-l-4 border-indigo-500"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p
+                          className={`font-medium ${
+                            theme === "dark" ? "text-gray-200" : "text-gray-800"
+                          } ${!notification.is_read ? "font-bold" : ""}`}
+                        >
+                          {notification.title || "Untitled"}
+                        </p>
+                        <p
+                          className={`text-sm ${
+                            theme === "dark" ? "text-gray-400" : "text-gray-500"
+                          }`}
+                        >
+                          {notification.message || "No message"}
+                        </p>
+                        <p
+                          className={`text-xs ${
+                            theme === "dark" ? "text-gray-500" : "text-gray-600"
+                          } mt-1`}
+                        >
+                          {notification.created_at
+                            ? new Date(notification.created_at).toLocaleString()
+                            : "Unknown date"}
+                          {notification.is_read ? " • Read" : " • Unread"}
+                        </p>
+                      </div>
+                      <div
+                        className={`w-2 h-2 rounded-full mt-2 ${
+                          notification.type === "announcement"
+                            ? "bg-indigo-500"
+                            : notification.type === "alert"
+                            ? "bg-red-500"
+                            : "bg-amber-500"
+                        }`}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+              {notifications.length > 5 && (
+                <button
+                  className={`text-sm ${
+                    theme === "dark" ? "text-indigo-400" : "text-indigo-600"
+                  } hover:underline mt-2`}
+                >
+                  View All Notifications
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div
+            className={`p-6 rounded-xl ${
+              theme === "dark" ? "bg-gray-800" : "bg-white"
+            }`}
+          >
+            <div className="flex items-center space-x-2 mb-4">
               <FiCalendar
                 className={`w-6 h-6 ${
                   theme === "dark" ? "text-emerald-400" : "text-emerald-600"
@@ -368,11 +490,9 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div
-            className={`lg:col-span-2 p-6 rounded-xl ${
+            className={`p-6 rounded-xl ${
               theme === "dark" ? "bg-gray-800" : "bg-white"
             }`}
           >
@@ -430,87 +550,87 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
+        </div>
 
-          <div
-            className={`p-6 rounded-xl ${
-              theme === "dark" ? "bg-gray-800" : "bg-white"
-            }`}
-          >
-            <div className="flex items-center space-x-2 mb-4">
-              <FiBarChart2
-                className={`w-6 h-6 ${
-                  theme === "dark" ? "text-amber-400" : "text-amber-600"
-                }`}
-              />
-              <h3
-                className={`text-lg font-semibold ${
-                  theme === "dark" ? "text-gray-200" : "text-gray-800"
+        <div
+          className={`p-6 rounded-xl ${
+            theme === "dark" ? "bg-gray-800" : "bg-white"
+          }`}
+        >
+          <div className="flex items-center space-x-2 mb-4">
+            <FiBarChart2
+              className={`w-6 h-6 ${
+                theme === "dark" ? "text-amber-400" : "text-amber-600"
+              }`}
+            />
+            <h3
+              className={`text-lg font-semibold ${
+                theme === "dark" ? "text-gray-200" : "text-gray-800"
+              }`}
+            >
+              Quick Stats
+            </h3>
+          </div>
+          <div className="space-y-4">
+            <div
+              className={`p-4 rounded-lg ${
+                theme === "dark" ? "bg-gray-700" : "bg-gray-50"
+              }`}
+            >
+              <p
+                className={`text-sm ${
+                  theme === "dark" ? "text-gray-400" : "text-gray-500"
                 }`}
               >
-                Quick Stats
-              </h3>
+                Avg. Daily Attendance
+              </p>
+              <p
+                className={`text-2xl font-bold ${
+                  theme === "dark" ? "text-gray-100" : "text-gray-900"
+                }`}
+              >
+                89%
+              </p>
             </div>
-            <div className="space-y-4">
-              <div
-                className={`p-4 rounded-lg ${
-                  theme === "dark" ? "bg-gray-700" : "bg-gray-50"
+            <div
+              className={`p-4 rounded-lg ${
+                theme === "dark" ? "bg-gray-700" : "bg-gray-50"
+              }`}
+            >
+              <p
+                className={`text-sm ${
+                  theme === "dark" ? "text-gray-400" : "text-gray-500"
                 }`}
               >
-                <p
-                  className={`text-sm ${
-                    theme === "dark" ? "text-gray-400" : "text-gray-500"
-                  }`}
-                >
-                  Avg. Daily Attendance
-                </p>
-                <p
-                  className={`text-2xl font-bold ${
-                    theme === "dark" ? "text-gray-100" : "text-gray-900"
-                  }`}
-                >
-                  89%
-                </p>
-              </div>
-              <div
-                className={`p-4 rounded-lg ${
-                  theme === "dark" ? "bg-gray-700" : "bg-gray-50"
+                Pending Assignments
+              </p>
+              <p
+                className={`text-2xl font-bold ${
+                  theme === "dark" ? "text-gray-100" : "text-gray-900"
                 }`}
               >
-                <p
-                  className={`text-sm ${
-                    theme === "dark" ? "text-gray-400" : "text-gray-500"
-                  }`}
-                >
-                  Pending Assignments
-                </p>
-                <p
-                  className={`text-2xl font-bold ${
-                    theme === "dark" ? "text-gray-100" : "text-gray-900"
-                  }`}
-                >
-                  24
-                </p>
-              </div>
-              <div
-                className={`p-4 rounded-lg ${
-                  theme === "dark" ? "bg-gray-700" : "bg-gray-50"
+                24
+              </p>
+            </div>
+            <div
+              className={`p-4 rounded-lg ${
+                theme === "dark" ? "bg-gray-700" : "bg-gray-50"
+              }`}
+            >
+              <p
+                className={`text-sm ${
+                  theme === "dark" ? "text-gray-400" : "text-gray-500"
                 }`}
               >
-                <p
-                  className={`text-sm ${
-                    theme === "dark" ? "text-gray-400" : "text-gray-500"
-                  }`}
-                >
-                  Staff Members
-                </p>
-                <p
-                  className={`text-2xl font-bold ${
-                    theme === "dark" ? "text-gray-100" : "text-gray-900"
-                  }`}
-                >
-                  42
-                </p>
-              </div>
+                Staff Members
+              </p>
+              <p
+                className={`text-2xl font-bold ${
+                  theme === "dark" ? "text-gray-100" : "text-gray-900"
+                }`}
+              >
+                42
+              </p>
             </div>
           </div>
         </div>
